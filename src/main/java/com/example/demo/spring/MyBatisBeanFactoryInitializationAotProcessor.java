@@ -102,8 +102,6 @@ class MyBatisBeanFactoryInitializationAotProcessor
                     runtimeHints.resources().registerResource(r);
                 }
             }
-
-
         };
     }
 }
