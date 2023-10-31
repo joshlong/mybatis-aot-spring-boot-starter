@@ -72,7 +72,7 @@ class MyBatisBeanFactoryInitializationAotProcessor
             var beanDefinition = beanFactory.getBeanDefinition(beanName.substring(1));
             var mapperInterface = beanDefinition.getPropertyValues().getPropertyValue("mapperInterface");
             if (mapperInterface != null && mapperInterface.getValue() != null) {
-                Class<?> mapperInterfaceType = (Class<?>) mapperInterface.getValue();
+                var mapperInterfaceType = (Class<?>) mapperInterface.getValue();
                 if (mapperInterfaceType != null) {
                     proxiesToRegister.add(mapperInterfaceType);
                     resourcesToRegister.add(
