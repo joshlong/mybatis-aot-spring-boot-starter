@@ -14,6 +14,11 @@ class MyBatisAotAutoConfiguration {
     }
 
     @Bean
+    static MyBatisBeanFactoryInitializationAotProcessor myBatisBeanFactoryInitializationAotProcessor() {
+        return new MyBatisBeanFactoryInitializationAotProcessor();
+    }
+
+    @Bean
     static MappersBeanFactoryInitializationAotProcessor mappersBeanFactoryInitializationAotProcessor() {
         return new MappersBeanFactoryInitializationAotProcessor();
     }
