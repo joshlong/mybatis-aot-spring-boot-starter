@@ -51,7 +51,14 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.lang.invoke.MethodHandles;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.TypeVariable;
+import java.lang.reflect.WildcardType;
+import java.sql.CallableStatement;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -60,107 +67,125 @@ import java.util.stream.Stream;
  */
 class MyBatisGlobalRuntimeHintsRegistrar implements RuntimeHintsRegistrar {
 
-    private final PathMatchingResourcePatternResolver resourcePatternResolver = MyBatisAotAutoConfiguration
-            .patternResolver();
+	private final PathMatchingResourcePatternResolver resourcePatternResolver = MyBatisAotAutoConfiguration
+		.patternResolver();
 
-    private final Logger log = LoggerFactory.getLogger(getClass());
+	private final Logger log = LoggerFactory.getLogger(getClass());
 
-    @Override
-    public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
-        try {
-            registerResources(hints);
-            registerGlobalTypeHints(hints);
-            registerProxies(hints);
-        } //
-        catch (Throwable throwable) {
-            throw new RuntimeException(throwable);
-        }
-    }
+	@Override
+	public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
+		try {
+			registerResources(hints);
+			registerGlobalTypeHints(hints);
+			registerProxies(hints);
+		} //
+		catch (Throwable throwable) {
+			throw new RuntimeException(throwable);
+		}
+	}
 
-    private void registerProxies(RuntimeHints hints) {
-        var proxies = Set.of(SqlSession.class);
-        AotUtils.debug("global proxies", proxies);
-        for (var p : proxies)
-            hints.proxies().registerJdkProxy(p);
-    }
+	private void registerProxies(RuntimeHints hints) {
+		var proxies = Set.of(Set.of(Connection.class.getName()), Set.of(SqlSession.class.getName()),
+				Set.of(PreparedStatement.class.getName(), CallableStatement.class.getName()),
+				Set.of(ParameterizedType.class.getName(),
+						"org.springframework.core.SerializableTypeWrapper$SerializableTypeProxy",
+						java.io.Serializable.class.getName()),
+				Set.of(TypeVariable.class.getName(),
+						"org.springframework.core.SerializableTypeWrapper$SerializableTypeProxy",
+						java.io.Serializable.class.getName()),
+				Set.of(WildcardType.class.getName(),
+						"org.springframework.core.SerializableTypeWrapper$SerializableTypeProxy",
+						java.io.Serializable.class.getName()));
+		AotUtils.debug("global proxies", proxies);
+		for (var p : proxies) {
+			var parts = p.stream().map(TypeReference::of).toArray(TypeReference[]::new);
+			hints.proxies().registerJdkProxy(parts);
+		}
+	}
 
-    private static Resource newResourceFor(Resource in) {
-        try {
-            var marker = "jar!";
-            var p = in.getURL().toExternalForm();
-            var rest = p.substring(p.lastIndexOf(marker) + marker.length());
-            return new ClassPathResource(rest);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
+	private static Resource newResourceFor(Resource in) {
+		try {
+			var marker = "jar!";
+			var p = in.getURL().toExternalForm();
+			var rest = p.substring(p.lastIndexOf(marker) + marker.length());
+			return new ClassPathResource(rest);
+		}
+		catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
 
-    private void registerResources(RuntimeHints hints) throws IOException {
+	private void registerResources(RuntimeHints hints) throws IOException {
 
-        var resources = new HashSet<Resource>();
-        var config = Stream
-                .of("org/apache/ibatis/builder/xml/*.dtd", "org/apache/ibatis/builder/xml/*.xsd", "org/mybatis/spring/config/*.xsd")
-                .map(p -> ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + p)
-                .flatMap(p -> {
-                    try {
-                        return Stream.of(this.resourcePatternResolver.getResources(p));
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .map(MyBatisGlobalRuntimeHintsRegistrar::newResourceFor)
-                .filter(Resource::exists)
-                .toList();
+		var resources = new HashSet<Resource>();
+		var config = Stream
+			.of("org/apache/ibatis/builder/xml/*.dtd", "org/apache/ibatis/builder/xml/*.xsd",
+					"org/mybatis/spring/config/*.xsd")
+			.map(p -> ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + p)
+			.flatMap(p -> {
+				try {
+					return Stream.of(this.resourcePatternResolver.getResources(p));
+				}
+				catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+			})
+			.map(MyBatisGlobalRuntimeHintsRegistrar::newResourceFor)
+			.filter(Resource::exists)
+			.toList();
 
-        resources.addAll(config);
+		resources.addAll(config);
 
-        AotUtils.debug("resources", resources);
-        for (var r : resources)
-            hints.resources().registerResource(r);
-    }
+		AotUtils.debug("resources", resources);
+		for (var r : resources)
+			hints.resources().registerResource(r);
+	}
 
-    private void registerGlobalTypeHints(RuntimeHints hints) {
+	private void registerGlobalTypeHints(RuntimeHints hints) {
 
-        var caches = Set.of(Cache.class, LruCache.class, BlockingCache.class, SerializedCache.class, FifoCache.class,
-                NullCacheKey.class, PerpetualCache.class, CacheKey.class, WeakCache.class, TransactionalCache.class,
-                SynchronizedCache.class, LoggingCache.class);
+		var caches = Set.of(Cache.class, LruCache.class, BlockingCache.class, SerializedCache.class, FifoCache.class,
+				NullCacheKey.class, PerpetualCache.class, CacheKey.class, WeakCache.class, TransactionalCache.class,
+				SynchronizedCache.class, LoggingCache.class);
 
-        var collections = Set.of(AbstractList.class, List.class, RandomAccess.class, Cloneable.class, Collection.class,
-                TreeSet.class, SortedSet.class, Iterator.class, ArrayList.class, HashSet.class, Set.class, Map.class);
+		var collections = Set.of(AbstractList.class, List.class, RandomAccess.class, Cloneable.class, Collection.class,
+				TreeSet.class, SortedSet.class, Iterator.class, ArrayList.class, HashSet.class, Set.class, Map.class);
 
-        var loggers = Set.of(Log4jImpl.class, Log4j2Impl.class, Log4j2LoggerImpl.class, Log4j2AbstractLoggerImpl.class,
-                NoLoggingImpl.class, SLF4JLogger.class, StdOutImpl.class, BaseJdbcLogger.class, ConnectionLogger.class,
-                PreparedStatementLogger.class, ResultSetLogger.class, StatementLogger.class, Jdk14LoggingImpl.class,
-                JakartaCommonsLoggingImpl.class, Slf4jImpl.class);
+		var loggers = Set.of(Log4jImpl.class, Log4j2Impl.class, Log4j2LoggerImpl.class, Log4j2AbstractLoggerImpl.class,
+				NoLoggingImpl.class, SLF4JLogger.class, StdOutImpl.class, BaseJdbcLogger.class, ConnectionLogger.class,
+				PreparedStatementLogger.class, ResultSetLogger.class, StatementLogger.class, Jdk14LoggingImpl.class,
+				JakartaCommonsLoggingImpl.class, Slf4jImpl.class);
+		var annotations = Set.of(Select.class, Update.class, Insert.class, Delete.class, SelectProvider.class,
+				UpdateProvider.class, InsertProvider.class, CacheNamespace.class, Flush.class, DeleteProvider.class,
+				Options.class, Options.FlushCachePolicy.class, Many.class, Mapper.class, One.class, Property.class,
+				Result.class, Results.class);
 
-        var memberCategories = MemberCategory.values();
+		var memberCategories = MemberCategory.values();
 
-        var classesForReflection = new HashSet<Class<?>>();
-        classesForReflection.addAll(caches);
-        classesForReflection.addAll(loggers);
-        classesForReflection.addAll(collections);
-        classesForReflection.addAll(Set.of(java.io.Serializable.class, SpringBootVFS.class, PerpetualCache.class,
-                Cursor.class, Optional.class, LruCache.class, MethodHandles.class, Date.class, HashMap.class,
-                CacheRefResolver.class, XNode.class, ResultFlag.class, ResultMapResolver.class,
-                MapperScannerConfigurer.class, MethodResolver.class, ProviderMethodResolver.class,
-                ProviderContext.class, MapperAnnotationBuilder.class, Select.class,
-                Update.class, Insert.class, Delete.class, SelectProvider.class, UpdateProvider.class,
-                InsertProvider.class, CacheNamespace.class, Flush.class, DeleteProvider.class, Options.class,
-                Logger.class, LogFactory.class, RuntimeSupport.class, Log.class, SqlSessionTemplate.class,
-                SqlSessionFactory.class, SqlSessionFactoryBean.class, ProxyFactory.class, XMLLanguageDriver.class,
-                RawLanguageDriver.class, Configuration.class, String.class, int.class, Number.class, Integer.class,
-                long.class, Long.class, short.class, Short.class, byte.class, Byte.class, float.class, Float.class,
-                boolean.class, Boolean.class, double.class, Double.class));
+		var classesForReflection = new HashSet<Class<?>>();
 
-        AotUtils.debug("global types for reflection", classesForReflection);
+		classesForReflection.addAll(caches);
+		classesForReflection.addAll(annotations);
+		classesForReflection.addAll(loggers);
+		classesForReflection.addAll(collections);
+		classesForReflection.addAll(Set.of(Serializable.class, SpringBootVFS.class, PerpetualCache.class, Cursor.class,
+				Optional.class, LruCache.class, MethodHandles.class, Date.class, HashMap.class, CacheRefResolver.class,
+				XNode.class, ResultFlag.class, ResultMapResolver.class, MapperScannerConfigurer.class,
+				MethodResolver.class, ProviderMethodResolver.class, ProviderContext.class,
+				MapperAnnotationBuilder.class, Logger.class, LogFactory.class, RuntimeSupport.class, Log.class,
+				SqlSessionTemplate.class, SqlSessionFactory.class, SqlSessionFactoryBean.class, ProxyFactory.class,
+				XMLLanguageDriver.class, RawLanguageDriver.class, Configuration.class, String.class, int.class,
+				Number.class, Integer.class, long.class, Long.class, short.class, Short.class, byte.class, Byte.class,
+				float.class, Float.class, boolean.class, Boolean.class, double.class, Double.class));
 
-        for (var c : classesForReflection) {
-            hints.reflection().registerType(c, memberCategories);
-            if (AotUtils.isSerializable(c)) {
-                hints.serialization().registerType(TypeReference.of(c.getName()));
-                log.info("the type " + c.getName() + " is serializable");
-            }
-        }
-    }
+		AotUtils.debug("global types for reflection", classesForReflection);
+
+		for (var c : classesForReflection) {
+			hints.reflection().registerType(c, memberCategories);
+			if (AotUtils.isSerializable(c)) {
+				hints.serialization().registerType(TypeReference.of(c.getName()));
+				log.info("the type " + c.getName() + " is serializable");
+			}
+		}
+	}
 
 }

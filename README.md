@@ -5,8 +5,8 @@ the goal is to migrate the Spring Native support to work with the Spring Boot 3 
 ## Working So Far...
 * core configuration with the Spring Boot autoconfiguration  
 * caching 
-* configuration
-* 
+* configuration properties
+* XML 
 
 
 ## to do 
