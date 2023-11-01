@@ -25,9 +25,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-/**
- * @author Josh Long
- */
 final class MyBatisMapperTypeUtils {
 
 	private MyBatisMapperTypeUtils() {
