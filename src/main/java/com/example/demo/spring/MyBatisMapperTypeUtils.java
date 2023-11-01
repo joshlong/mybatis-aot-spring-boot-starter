@@ -31,7 +31,6 @@ import java.util.stream.Stream;
 final class MyBatisMapperTypeUtils {
 
 	private MyBatisMapperTypeUtils() {
-		// NOP
 	}
 
 	static Class<?> resolveReturnClass(Class<?> mapperInterface, Method method) {

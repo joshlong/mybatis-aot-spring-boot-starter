@@ -40,24 +40,17 @@ class MyBatisBeanFactoryInitializationAotProcessor implements BeanFactoryInitial
 		for (var packageName : AutoConfigurationPackages.get(beanFactory)) {
 			Assert.hasText(packageName, "the package name must not be empty!");
 			var path = AotUtils.packageNameToFolder(packageName);
-
 			for (var resolvedXmlResource : this.resourcePatternResolver
 				.getResources(ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + "**/*.xml")) {
-
 				var fqn = resolvedXmlResource.getURI().toString();
-
 				if (resolvedXmlResource.exists() && fqn.contains(path)) {
 					var np = fqn.substring(fqn.indexOf(path));
 					var npr = new ClassPathResource(np);
 					set.add(npr);
 				}
-
 			}
-
 		}
-
 		return set;
-
 	}
 
 	@Override
@@ -70,9 +63,7 @@ class MyBatisBeanFactoryInitializationAotProcessor implements BeanFactoryInitial
 			var classesToRegister = new HashSet<Class<?>>();
 			var proxiesToRegister = new HashSet<Class<?>>();
 			var resourcesToRegister = new HashSet<Resource>();
-
 			resourcesToRegister.addAll(attemptToRegisterXmlResourcesForBasePackage(beanFactory));
-
 			var beanNames = beanFactory.getBeanNamesForType(MapperFactoryBean.class);
 			for (var beanName : beanNames) {
 				var beanDefinition = beanFactory.getBeanDefinition(beanName.substring(1));
@@ -88,27 +79,21 @@ class MyBatisBeanFactoryInitializationAotProcessor implements BeanFactoryInitial
 					}
 				}
 			}
-
 			return (generationContext, beanFactoryInitializationCode) -> {
-
 				var mcs = MemberCategory.values();
 				var runtimeHints = generationContext.getRuntimeHints();
-
 				AotUtils.debug("proxies", proxiesToRegister);
 				AotUtils.debug("classes for reflection", classesToRegister);
 				AotUtils.debug("resources", resourcesToRegister);
-
 				for (var c : proxiesToRegister) {
 					runtimeHints.proxies().registerJdkProxy(c);
 					runtimeHints.reflection().registerType(c, mcs);
 				}
-
 				for (var c : classesToRegister) {
 					runtimeHints.reflection().registerType(c, mcs);
 					if (AotUtils.isSerializable(c))
 						runtimeHints.serialization().registerType(TypeReference.of(c.getName()));
 				}
-
 				for (var r : resourcesToRegister) {
 					if (r.exists()) {
 						runtimeHints.resources().registerResource(r);

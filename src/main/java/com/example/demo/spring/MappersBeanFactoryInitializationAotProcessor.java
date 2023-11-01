@@ -29,9 +29,7 @@ class MappersBeanFactoryInitializationAotProcessor implements BeanFactoryInitial
 	private final PathMatchingResourcePatternResolver resolver = MyBatisAotAutoConfiguration.patternResolver();
 
 	private Set<Resource> persistenceResources(String rootPackage) throws Exception {
-
 		var folderFromPackage = AotUtils.packageNameToFolder(rootPackage);
-
 		var patterns = Stream//
 			.of(folderFromPackage + "/**/mappings.xml")//
 			.map(path -> ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + path)//
@@ -42,7 +40,7 @@ class MappersBeanFactoryInitializationAotProcessor implements BeanFactoryInitial
 				catch (IOException e) {
 					throw new RuntimeException(e);
 				}
-			})
+			})//
 			.map(AotUtils::newResourceFor)
 			.toList();
 

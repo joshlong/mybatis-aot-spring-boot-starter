@@ -17,7 +17,6 @@ final class AotUtils {
 	private static final Logger log = LoggerFactory.getLogger(AotUtils.class);
 
 	private AotUtils() {
-		// noop
 	}
 
 	static Resource newResourceFor(Resource in) {
@@ -48,7 +47,6 @@ final class AotUtils {
 		for (var c : packageName.toCharArray())
 			sb.append(c == '.' ? '/' : c);
 		return sb.toString();
-
 	}
 
 }
