@@ -41,78 +41,48 @@ import java.util.*;
 
 class MybatisRuntimeHintsRegistrar implements RuntimeHintsRegistrar {
 
-    private final PathMatchingResourcePatternResolver resourcePatternResolver = MyBatisAotAutoConfiguration.patternResolver();
+	private final PathMatchingResourcePatternResolver resourcePatternResolver = MyBatisAotAutoConfiguration
+		.patternResolver();
 
-    void registerResources(RuntimeHints hints) throws IOException {
-//
-        for (var r : this.resourcePatternResolver.getResources("org/mybatis/spring/config/.*.xsd"))
-            hints.resources().registerResource(r);
-    }
+	void registerResources(RuntimeHints hints) throws IOException {
+		//
+		for (var r : this.resourcePatternResolver.getResources("org/mybatis/spring/config/.*.xsd"))
+			hints.resources().registerResource(r);
+	}
 
-    @Override
-    public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
-        try {
+	@Override
+	public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
+		try {
 
-            registerResources(hints);
+			registerResources(hints);
 
-            var memberCategories = MemberCategory.values();
+			var memberCategories = MemberCategory.values();
 
+			var classesForReflection = Set.of(ArrayList.class, HashSet.class, Set.class, List.class, Map.class,
+					HashMap.class, CacheRefResolver.class, XNode.class, ResultFlag.class, ResultMapResolver.class,
+					MapperScannerConfigurer.class, MethodResolver.class, ProviderMethodResolver.class,
+					ProviderContext.class, MapperAnnotationBuilder.class, Select.class, Update.class, Insert.class,
+					Delete.class, SelectProvider.class, UpdateProvider.class, InsertProvider.class,
+					DeleteProvider.class, Options.class, Logger.class, LogFactory.class, RuntimeSupport.class,
+					Log.class, SqlSessionTemplate.class, SqlSessionFactory.class, SqlSessionFactoryBean.class,
+					ProxyFactory.class, XMLLanguageDriver.class,
+					// loggers
+					Log4jImpl.class, Log4j2Impl.class, Log4j2LoggerImpl.class, Log4j2AbstractLoggerImpl.class,
+					NoLoggingImpl.class, SLF4JLogger.class, StdOutImpl.class, BaseJdbcLogger.class,
+					ConnectionLogger.class, PreparedStatementLogger.class, ResultSetLogger.class, StatementLogger.class,
+					Jdk14LoggingImpl.class, JakartaCommonsLoggingImpl.class, Slf4jImpl.class,
+					//
+					RawLanguageDriver.class, org.apache.ibatis.session.Configuration.class, String.class, int.class,
+					Integer.class, long.class, Long.class, short.class, Short.class, byte.class, Byte.class,
+					float.class, Float.class, boolean.class, Boolean.class, double.class, Double.class);
 
+			for (var c : classesForReflection)
+				hints.reflection().registerType(c, memberCategories);
 
-            var classesForReflection = Set.of(
-                    ArrayList.class, HashSet.class, Set.class, List.class, Map.class, HashMap.class,
-                    CacheRefResolver.class,
-                    XNode.class,
-                    ResultFlag.class,
-                    ResultMapResolver.class,
-                    MapperScannerConfigurer.class,
-                    MethodResolver.class,
-                    ProviderMethodResolver.class,
-                    ProviderContext.class,
-                    MapperAnnotationBuilder.class,
-                    Select.class, Update.class, Insert.class,
-                    Delete.class, SelectProvider.class, UpdateProvider.class,
-                    InsertProvider.class, DeleteProvider.class, Options.class,
-                    Logger.class,
-                    LogFactory.class,
-                    RuntimeSupport.class,
-                    Log.class,
-                    SqlSessionTemplate.class,
-                    SqlSessionFactory.class,
-                    SqlSessionFactoryBean.class,
-                    ProxyFactory.class, XMLLanguageDriver.class,
-                    // loggers
-                    Log4jImpl.class,
-                    Log4j2Impl.class,
-                    Log4j2LoggerImpl.class,
-                    Log4j2AbstractLoggerImpl.class,
-                    NoLoggingImpl.class,
-                    SLF4JLogger.class,
-                    StdOutImpl.class,
-                    BaseJdbcLogger.class,
-                    ConnectionLogger.class,
-                    PreparedStatementLogger.class,
-                    ResultSetLogger.class,
-                    StatementLogger.class,
-                    Jdk14LoggingImpl.class,
-                    JakartaCommonsLoggingImpl.class,
-                    Slf4jImpl.class,
-                    //
-                    RawLanguageDriver.class,
-                    org.apache.ibatis.session.Configuration.class,
-                    String.class, int.class, Integer.class, long.class, Long.class, short.class,
-                    Short.class, byte.class, Byte.class, float.class, Float.class, boolean.class,
-                    Boolean.class, double.class, Double.class
-            );
-
-            for (var c : classesForReflection)
-                hints.reflection().registerType(c, memberCategories);
-
-        }//
-        catch (Throwable throwable) {
-            throw new RuntimeException(throwable);
-        }
-    }
-
+		} //
+		catch (Throwable throwable) {
+			throw new RuntimeException(throwable);
+		}
+	}
 
 }

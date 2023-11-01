@@ -9,18 +9,18 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 @ImportRuntimeHints(MybatisRuntimeHintsRegistrar.class)
 class MyBatisAotAutoConfiguration {
 
-    static PathMatchingResourcePatternResolver patternResolver() {
-        return new PathMatchingResourcePatternResolver();
-    }
+	static PathMatchingResourcePatternResolver patternResolver() {
+		return new PathMatchingResourcePatternResolver();
+	}
 
-    @Bean
-    static MyBatisBeanFactoryInitializationAotProcessor myBatisBeanFactoryInitializationAotProcessor() {
-        return new MyBatisBeanFactoryInitializationAotProcessor();
-    }
+	@Bean
+	static MyBatisBeanFactoryInitializationAotProcessor myBatisBeanFactoryInitializationAotProcessor() {
+		return new MyBatisBeanFactoryInitializationAotProcessor();
+	}
 
-    @Bean
-    static MappersBeanFactoryInitializationAotProcessor mappersBeanFactoryInitializationAotProcessor() {
-        return new MappersBeanFactoryInitializationAotProcessor();
-    }
+	@Bean
+	static MappersBeanFactoryInitializationAotProcessor mappersBeanFactoryInitializationAotProcessor() {
+		return new MappersBeanFactoryInitializationAotProcessor();
+	}
 
 }

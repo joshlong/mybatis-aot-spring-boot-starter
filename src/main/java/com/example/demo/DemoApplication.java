@@ -17,67 +17,62 @@ import java.util.Set;
 @SpringBootApplication
 public class DemoApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(DemoApplication.class, args);
-    }
+	public static void main(String[] args) {
+		SpringApplication.run(DemoApplication.class, args);
+	}
 
-   
-
-    @Bean
-    ApplicationRunner demoRunner(CustomerMapper customerMapper) {
-        return args -> {
-            Set.of("Josh", "Stéphane", "Eddù").forEach(name -> customerMapper.save(new Customer(null, name)));
-            customerMapper.find().forEach(System.out::println);
-        };
-    }
-
+	@Bean
+	ApplicationRunner demoRunner(CustomerMapper customerMapper) {
+		return args -> {
+			Set.of("Josh", "Stéphane", "Eddù").forEach(name -> customerMapper.save(new Customer(null, name)));
+			customerMapper.find().forEach(System.out::println);
+		};
+	}
 
 }
 
 class AppSpecificHints implements RuntimeHintsRegistrar {
 
-    @Override
-    public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
-        var mcs = MemberCategory.values();
-        Set.of(CustomerMapper.class, Customer.class).forEach(c -> hints.reflection().registerType(c, mcs));
-        hints.proxies().registerJdkProxy(CustomerMapper.class);
-    }
-}
+	@Override
+	public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
+		var mcs = MemberCategory.values();
+		Set.of(CustomerMapper.class, Customer.class).forEach(c -> hints.reflection().registerType(c, mcs));
+		hints.proxies().registerJdkProxy(CustomerMapper.class);
+	}
 
+}
 
 class Customer {
 
-    Integer id;
-    String name;
+	Integer id;
 
-    Customer(Integer id, String name) {
-        this.id = id;
-        this.name = name;
-    }
+	String name;
 
-    @Override
-    public String toString() {
-        return "Customer{" +
-               "id=" + id +
-               ", name='" + name + '\'' +
-               '}';
-    }
+	Customer(Integer id, String name) {
+		this.id = id;
+		this.name = name;
+	}
+
+	@Override
+	public String toString() {
+		return "Customer{" + "id=" + id + ", name='" + name + '\'' + '}';
+	}
+
 }
 
 @Mapper
 interface CustomerMapper {
 
-    @Insert("Insert into customer( name ) values(#{name} )")
-    @Options(useGeneratedKeys = true, flushCache = Options.FlushCachePolicy.FALSE)
-    Integer save(Customer address);
+	@Insert("Insert into customer( name ) values(#{name} )")
+	@Options(useGeneratedKeys = true, flushCache = Options.FlushCachePolicy.FALSE)
+	Integer save(Customer address);
 
-    @Select("SELECT  id, name FROM customer WHERE  id  = #{id}")
-    @Results(value = {@Result(property = "id", column = "id"), @Result(property = "name", column = "name")})
-    Customer findById(@Param("id") Integer id);
+	@Select("SELECT  id, name FROM customer WHERE  id  = #{id}")
+	@Results(value = { @Result(property = "id", column = "id"), @Result(property = "name", column = "name") })
+	Customer findById(@Param("id") Integer id);
 
-
-    @Select("SELECT  id, name FROM customer ")
-    @Results(value = {@Result(property = "id", column = "id"), @Result(property = "name", column = "name")})
-    Collection<Customer> find();
+	@Select("SELECT  id, name FROM customer ")
+	@Results(value = { @Result(property = "id", column = "id"), @Result(property = "name", column = "name") })
+	Collection<Customer> find();
 
 }
