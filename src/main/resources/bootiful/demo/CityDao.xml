@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.example.demo.CityDao">
+<mapper namespace="bootiful.demo.CityDao">
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO city (name, state, country)
         VALUES (#{name}, #{state}, #{country})
     </insert>
 
-    <select id="findAll" resultType="com.example.demo.City">
+    <select id="findAll" resultType="bootiful.demo.City">
         SELECT id, name, state, country
         FROM city
         ORDER BY id

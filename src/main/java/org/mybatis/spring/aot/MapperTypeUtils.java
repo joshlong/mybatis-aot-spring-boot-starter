@@ -13,7 +13,7 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-package com.example.demo.spring;
+package org.mybatis.spring.aot;
 
 import org.apache.ibatis.reflection.TypeParameterResolver;
 
@@ -25,9 +25,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-final class MyBatisMapperTypeUtils {
+final class MapperTypeUtils {
 
-	private MyBatisMapperTypeUtils() {
+	private MapperTypeUtils() {
 	}
 
 	static Class<?> resolveReturnClass(Class<?> mapperInterface, Method method) {

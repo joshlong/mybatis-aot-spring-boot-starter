@@ -1,4 +1,4 @@
-package com.example.demo.spring;
+package org.mybatis.spring.aot;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +42,7 @@ final class AotUtils {
 		log.debug(System.lineSeparator());
 	}
 
-	static String packageNameToFolder(String packageName) {
+	static String packageToPath(String packageName) {
 		var sb = new StringBuilder();
 		for (var c : packageName.toCharArray())
 			sb.append(c == '.' ? '/' : c);

@@ -1,9 +1,7 @@
-package com.example.demo;
+package bootiful.demo;
 
 import org.apache.ibatis.annotations.*;
 import org.apache.ibatis.session.SqlSession;
-import org.apache.ibatis.session.SqlSessionFactory;
-import org.mybatis.spring.boot.autoconfigure.MybatisProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.aot.hint.MemberCategory;
@@ -78,11 +76,11 @@ class CityDao {
 	}
 
 	void insert(City city) {
-		sqlSession.insert("com.example.demo.CityDao.insert", city);
+		sqlSession.insert("bootiful.demo.CityDao.insert", city);
 	}
 
 	Collection<City> findAll() {
-		return sqlSession.selectList("com.example.demo.CityDao.findAll");
+		return sqlSession.selectList("bootiful.demo.CityDao.findAll");
 	}
 
 }

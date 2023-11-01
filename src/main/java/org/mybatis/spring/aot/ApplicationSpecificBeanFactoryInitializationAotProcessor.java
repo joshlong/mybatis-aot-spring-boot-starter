@@ -1,4 +1,4 @@
-package com.example.demo.spring;
+package org.mybatis.spring.aot;
 
 import org.apache.ibatis.annotations.DeleteProvider;
 import org.apache.ibatis.annotations.InsertProvider;
@@ -27,23 +27,29 @@ import java.util.Set;
 import java.util.function.Function;
 
 /**
+ * Register hints based upon the structure of a particular user's Spring Boot application
+ * packages and {@link org.springframework.beans.factory.BeanFactory}
+ *
  * @author Josh Long
  */
-class MyBatisBeanFactoryInitializationAotProcessor implements BeanFactoryInitializationAotProcessor {
+class ApplicationSpecificBeanFactoryInitializationAotProcessor implements BeanFactoryInitializationAotProcessor {
 
-	private final PathMatchingResourcePatternResolver resourcePatternResolver = MyBatisAotAutoConfiguration
-		.patternResolver();
+	private final PathMatchingResourcePatternResolver resourcePatternResolver;
+
+	ApplicationSpecificBeanFactoryInitializationAotProcessor(PathMatchingResourcePatternResolver patternResolver) {
+		this.resourcePatternResolver = patternResolver;
+	}
 
 	private Collection<Resource> attemptToRegisterXmlResourcesForBasePackage(
 			ConfigurableListableBeanFactory beanFactory) throws Exception {
 		var set = new HashSet<Resource>();
 		for (var packageName : AutoConfigurationPackages.get(beanFactory)) {
 			Assert.hasText(packageName, "the package name must not be empty!");
-			var path = AotUtils.packageNameToFolder(packageName);
+			var path = AotUtils.packageToPath(packageName);
 			for (var resolvedXmlResource : this.resourcePatternResolver
-				.getResources(ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + "**/*.xml")) {
+				.getResources(ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + path + "/**/*.xml")) {
 				var fqn = resolvedXmlResource.getURI().toString();
-				if (resolvedXmlResource.exists() && fqn.contains(path)) {
+				if (resolvedXmlResource.exists()) {
 					var np = fqn.substring(fqn.indexOf(path));
 					var npr = new ClassPathResource(np);
 					set.add(npr);
@@ -138,10 +144,10 @@ class MyBatisBeanFactoryInitializationAotProcessor implements BeanFactoryInitial
 				registerSqlProviderTypes(method, registry, DeleteProvider.class, DeleteProvider::value,
 						DeleteProvider::type);
 
-				var returnType = MyBatisMapperTypeUtils.resolveReturnClass(mapperInterfaceType, method);
+				var returnType = MapperTypeUtils.resolveReturnClass(mapperInterfaceType, method);
 				registerReflectionTypeIfNecessary(returnType, registry);
 
-				MyBatisMapperTypeUtils.resolveParameterClasses(mapperInterfaceType, method)
+				MapperTypeUtils.resolveParameterClasses(mapperInterfaceType, method)
 					.forEach(x -> registerReflectionTypeIfNecessary(x, registry));
 			}
 		}

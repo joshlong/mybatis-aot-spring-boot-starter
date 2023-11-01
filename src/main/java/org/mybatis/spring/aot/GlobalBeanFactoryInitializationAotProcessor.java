@@ -1,4 +1,4 @@
-package com.example.demo.spring;
+package org.mybatis.spring.aot;
 
 import org.apache.ibatis.annotations.*;
 import org.apache.ibatis.builder.CacheRefResolver;
@@ -43,8 +43,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.RuntimeHints;
-import org.springframework.aot.hint.RuntimeHintsRegistrar;
 import org.springframework.aot.hint.TypeReference;
+import org.springframework.beans.factory.aot.BeanFactoryInitializationAotContribution;
+import org.springframework.beans.factory.aot.BeanFactoryInitializationAotProcessor;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
@@ -63,25 +65,18 @@ import java.util.*;
 import java.util.stream.Stream;
 
 /**
+ * Register invariant hints for Mybatis that are presumed the same for all applications
+ *
  * @author Josh Long
  */
-class MyBatisGlobalRuntimeHintsRegistrar implements RuntimeHintsRegistrar {
+class GlobalBeanFactoryInitializationAotProcessor implements BeanFactoryInitializationAotProcessor {
 
-	private final PathMatchingResourcePatternResolver resourcePatternResolver = MyBatisAotAutoConfiguration
-		.patternResolver();
+	private final PathMatchingResourcePatternResolver resourcePatternResolver;
 
 	private final Logger log = LoggerFactory.getLogger(getClass());
 
-	@Override
-	public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
-		try {
-			registerResources(hints);
-			registerGlobalTypeHints(hints);
-			registerProxies(hints);
-		} //
-		catch (Throwable throwable) {
-			throw new RuntimeException(throwable);
-		}
+	GlobalBeanFactoryInitializationAotProcessor(PathMatchingResourcePatternResolver patternResolver) {
+		this.resourcePatternResolver = patternResolver;
 	}
 
 	private void registerProxies(RuntimeHints hints) {
@@ -130,7 +125,7 @@ class MyBatisGlobalRuntimeHintsRegistrar implements RuntimeHintsRegistrar {
 					throw new RuntimeException(e);
 				}
 			})
-			.map(MyBatisGlobalRuntimeHintsRegistrar::newResourceFor)
+			.map(GlobalBeanFactoryInitializationAotProcessor::newResourceFor)
 			.filter(Resource::exists)
 			.toList();
 
@@ -184,9 +179,25 @@ class MyBatisGlobalRuntimeHintsRegistrar implements RuntimeHintsRegistrar {
 			hints.reflection().registerType(c, memberCategories);
 			if (AotUtils.isSerializable(c)) {
 				hints.serialization().registerType(TypeReference.of(c.getName()));
-				log.info("the type " + c.getName() + " is serializable");
+				if (log.isDebugEnabled())
+					log.debug("the type " + c.getName() + " is serializable");
 			}
 		}
+	}
+
+	@Override
+	public BeanFactoryInitializationAotContribution processAheadOfTime(ConfigurableListableBeanFactory beanFactory) {
+		return (generationContext, beanFactoryInitializationCode) -> {
+			try {
+				var hints = generationContext.getRuntimeHints();
+				registerResources(hints);
+				registerGlobalTypeHints(hints);
+				registerProxies(hints);
+			} //
+			catch (Throwable throwable) {
+				throw new RuntimeException(throwable);
+			}
+		};
 	}
 
 }

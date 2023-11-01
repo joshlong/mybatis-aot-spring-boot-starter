@@ -1,4 +1,4 @@
-package com.example.demo.spring;
+package org.mybatis.spring.aot;
 
 import org.springframework.beans.factory.aot.BeanFactoryInitializationAotContribution;
 import org.springframework.beans.factory.aot.BeanFactoryInitializationAotProcessor;
@@ -22,14 +22,21 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
+ * Discovers any {@literal  mappings.xml} and reads them in to then register the
+ * referenced {@literal .xml} files as resource hints.
+ *
  * @author Josh Long
  */
 class MappersBeanFactoryInitializationAotProcessor implements BeanFactoryInitializationAotProcessor {
 
-	private final PathMatchingResourcePatternResolver resolver = MyBatisAotAutoConfiguration.patternResolver();
+	private final PathMatchingResourcePatternResolver resolver;
+
+	MappersBeanFactoryInitializationAotProcessor(PathMatchingResourcePatternResolver resolver) {
+		this.resolver = resolver;
+	}
 
 	private Set<Resource> persistenceResources(String rootPackage) throws Exception {
-		var folderFromPackage = AotUtils.packageNameToFolder(rootPackage);
+		var folderFromPackage = AotUtils.packageToPath(rootPackage);
 		var patterns = Stream//
 			.of(folderFromPackage + "/**/mappings.xml")//
 			.map(path -> ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + path)//
