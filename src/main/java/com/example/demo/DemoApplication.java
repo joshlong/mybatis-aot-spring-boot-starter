@@ -31,12 +31,8 @@ public class DemoApplication {
 
 }
 
-
-
-class Customer
- implements Serializable // for caching
+class Customer implements Serializable // for caching
 {
-
 
 	@Serial
 	private static final long serialVersionUID = 1L;
