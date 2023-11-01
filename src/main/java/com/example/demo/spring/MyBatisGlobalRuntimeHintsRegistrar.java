@@ -50,7 +50,10 @@ import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.util.*;
 
-class MybatisRuntimeHintsRegistrar implements RuntimeHintsRegistrar {
+/**
+ * @author Josh Long
+ */
+class MyBatisGlobalRuntimeHintsRegistrar implements RuntimeHintsRegistrar {
 
 	private final PathMatchingResourcePatternResolver resourcePatternResolver = MyBatisAotAutoConfiguration
 		.patternResolver();

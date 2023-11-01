@@ -6,6 +6,9 @@ import org.slf4j.LoggerFactory;
 import java.io.Serializable;
 import java.util.Collection;
 
+/**
+ * @author Josh Long
+ */
 final class AotUtils {
 
 	private static final Logger log = LoggerFactory.getLogger(AotUtils.class);

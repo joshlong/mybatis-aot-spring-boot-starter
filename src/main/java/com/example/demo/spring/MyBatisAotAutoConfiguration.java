@@ -5,8 +5,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.ImportRuntimeHints;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
+/**
+ * @author Josh Long
+ */
 @Configuration
-@ImportRuntimeHints(MybatisRuntimeHintsRegistrar.class)
+@ImportRuntimeHints(MyBatisGlobalRuntimeHintsRegistrar.class)
 class MyBatisAotAutoConfiguration {
 
 	static PathMatchingResourcePatternResolver patternResolver() {
