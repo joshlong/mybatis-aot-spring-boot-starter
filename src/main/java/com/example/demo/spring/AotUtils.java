@@ -22,10 +22,10 @@ final class AotUtils {
 	}
 
 	static <T> void debug(String message, Collection<T> tCollection) {
-		log.info(message + System.lineSeparator());
+		log.debug(message + System.lineSeparator());
 		for (var t : tCollection)
-			log.info('\t' + t.toString());
-		log.info(System.lineSeparator());
+			log.debug('\t' + t.toString());
+		log.debug(System.lineSeparator());
 	}
 
 }

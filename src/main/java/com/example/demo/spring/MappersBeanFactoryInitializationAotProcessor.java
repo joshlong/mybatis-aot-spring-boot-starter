@@ -1,7 +1,5 @@
 package com.example.demo.spring;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.aot.BeanFactoryInitializationAotContribution;
 import org.springframework.beans.factory.aot.BeanFactoryInitializationAotProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -27,8 +25,6 @@ import java.util.stream.Stream;
  * @author Josh Long
  */
 class MappersBeanFactoryInitializationAotProcessor implements BeanFactoryInitializationAotProcessor {
-
-	private final Logger log = LoggerFactory.getLogger(getClass());
 
 	private final PathMatchingResourcePatternResolver resolver = MyBatisAotAutoConfiguration.patternResolver();
 
