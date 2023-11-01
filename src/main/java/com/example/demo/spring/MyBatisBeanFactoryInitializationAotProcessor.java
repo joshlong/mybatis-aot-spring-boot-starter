@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.SelectProvider;
 import org.apache.ibatis.annotations.UpdateProvider;
 import org.mybatis.spring.mapper.MapperFactoryBean;
 import org.springframework.aot.hint.MemberCategory;
+import org.springframework.aot.hint.TypeReference;
 import org.springframework.beans.factory.aot.BeanFactoryInitializationAotContribution;
 import org.springframework.beans.factory.aot.BeanFactoryInitializationAotProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -22,93 +23,100 @@ import java.util.function.Function;
 
 class MyBatisBeanFactoryInitializationAotProcessor implements BeanFactoryInitializationAotProcessor {
 
-	private void registerMapperRelationships(Class<?> mapperInterfaceType, Set<Class<?>> registry) {
-		var methods = ReflectionUtils.getAllDeclaredMethods(mapperInterfaceType);
-		for (var method : methods) {
-			if (method.getDeclaringClass() != Object.class) {
+    @Override
+    public BeanFactoryInitializationAotContribution processAheadOfTime(ConfigurableListableBeanFactory beanFactory) {
 
-				ReflectionUtils.makeAccessible(method);
+        if (!ClassUtils.isPresent("org.mybatis.spring.mapper.MapperFactoryBean", beanFactory.getBeanClassLoader()))
+            return null;
 
-				registerSqlProviderTypes(method, registry, SelectProvider.class, SelectProvider::value,
-						SelectProvider::type);
-				registerSqlProviderTypes(method, registry, InsertProvider.class, InsertProvider::value,
-						InsertProvider::type);
-				registerSqlProviderTypes(method, registry, UpdateProvider.class, UpdateProvider::value,
-						UpdateProvider::type);
-				registerSqlProviderTypes(method, registry, DeleteProvider.class, DeleteProvider::value,
-						DeleteProvider::type);
+        var classesToRegister = new HashSet<Class<?>>();
+        var proxiesToRegister = new HashSet<Class<?>>();
+        var resourcesToRegister = new HashSet<Resource>();
 
-				var returnType = MyBatisMapperTypeUtils.resolveReturnClass(mapperInterfaceType, method);
-				registerReflectionTypeIfNecessary(returnType, registry);
+        var beanNames = beanFactory.getBeanNamesForType(MapperFactoryBean.class);
+        for (var beanName : beanNames) {
+            var beanDefinition = beanFactory.getBeanDefinition(beanName.substring(1));
+            var mapperInterface = beanDefinition.getPropertyValues().getPropertyValue("mapperInterface");
+            if (mapperInterface != null && mapperInterface.getValue() != null) {
+                var mapperInterfaceType = (Class<?>) mapperInterface.getValue();
+                if (mapperInterfaceType != null) {
+                    proxiesToRegister.add(mapperInterfaceType);
+                    resourcesToRegister
+                            .add(new ClassPathResource(mapperInterfaceType.getName().replace('.', '/').concat(".xml")));
+                    registerReflectionTypeIfNecessary(mapperInterfaceType, classesToRegister);
+                    registerMapperRelationships(mapperInterfaceType, classesToRegister);
+                }
+            }
+        }
 
-				MyBatisMapperTypeUtils.resolveParameterClasses(mapperInterfaceType, method)
-					.forEach(x -> registerReflectionTypeIfNecessary(x, registry));
-			}
-		}
-	}
+        return (generationContext, beanFactoryInitializationCode) -> {
 
-	@SafeVarargs
-	private <T extends Annotation> void registerSqlProviderTypes(Method method, Set<Class<?>> registry,
-			Class<T> annotationType, Function<T, Class<?>>... providerTypeResolvers) {
-		for (T annotation : method.getAnnotationsByType(annotationType)) {
-			for (Function<T, Class<?>> providerTypeResolver : providerTypeResolvers) {
-				registerReflectionTypeIfNecessary(providerTypeResolver.apply(annotation), registry);
-			}
-		}
-	}
+            var mcs = MemberCategory.values();
+            var runtimeHints = generationContext.getRuntimeHints();
 
-	private void registerReflectionTypeIfNecessary(Class<?> type, Set<Class<?>> registry) {
-		if (!type.isPrimitive() && !type.getName().startsWith("java")) {
-			registry.add(type);
-		}
-	}
+            AotUtils.debug("proxies", proxiesToRegister);
+            AotUtils.debug("classes for reflection", classesToRegister);
+            AotUtils.debug("resources", resourcesToRegister);
 
-	@Override
-	public BeanFactoryInitializationAotContribution processAheadOfTime(ConfigurableListableBeanFactory beanFactory) {
+            for (var c : proxiesToRegister) {
+                runtimeHints.proxies().registerJdkProxy(c);
+                runtimeHints.reflection().registerType(c, mcs);
+            }
 
-		if (!ClassUtils.isPresent("org.mybatis.spring.mapper.MapperFactoryBean", beanFactory.getBeanClassLoader()))
-			return null;
+            for (var c : classesToRegister) {
+                runtimeHints.reflection().registerType(c, mcs);
+                if (AotUtils.isSerializable(c))
+                    runtimeHints.serialization().registerType(TypeReference.of(c.getName()));
+            }
 
-		var classesToRegister = new HashSet<Class<?>>();
-		var proxiesToRegister = new HashSet<Class<?>>();
-		var resourcesToRegister = new HashSet<Resource>();
+            for (var r : resourcesToRegister) {
+                if (r.exists()) {
+                    runtimeHints.resources().registerResource(r);
+                }
+            }
+        };
+    }
 
-		var beanNames = beanFactory.getBeanNamesForType(MapperFactoryBean.class);
-		for (var beanName : beanNames) {
-			var beanDefinition = beanFactory.getBeanDefinition(beanName.substring(1));
-			var mapperInterface = beanDefinition.getPropertyValues().getPropertyValue("mapperInterface");
-			if (mapperInterface != null && mapperInterface.getValue() != null) {
-				var mapperInterfaceType = (Class<?>) mapperInterface.getValue();
-				if (mapperInterfaceType != null) {
-					proxiesToRegister.add(mapperInterfaceType);
-					resourcesToRegister
-						.add(new ClassPathResource(mapperInterfaceType.getName().replace('.', '/').concat(".xml")));
-					registerReflectionTypeIfNecessary(mapperInterfaceType, classesToRegister);
-					registerMapperRelationships(mapperInterfaceType, classesToRegister);
-				}
-			}
-		}
 
-		return (generationContext, beanFactoryInitializationCode) -> {
+    @SafeVarargs
+    private <T extends Annotation> void registerSqlProviderTypes(Method method, Set<Class<?>> registry,
+                                                                 Class<T> annotationType, Function<T, Class<?>>... providerTypeResolvers) {
+        for (T annotation : method.getAnnotationsByType(annotationType)) {
+            for (Function<T, Class<?>> providerTypeResolver : providerTypeResolvers) {
+                registerReflectionTypeIfNecessary(providerTypeResolver.apply(annotation), registry);
+            }
+        }
+    }
 
-			var mcs = MemberCategory.values();
-			var runtimeHints = generationContext.getRuntimeHints();
+    private void registerReflectionTypeIfNecessary(Class<?> type, Set<Class<?>> registry) {
+        if (!type.isPrimitive() && !type.getName().startsWith("java")) {
+            registry.add(type);
+        }
+    }
 
-			for (var c : proxiesToRegister) {
-				runtimeHints.proxies().registerJdkProxy(c);
-				runtimeHints.reflection().registerType(c, mcs);
-			}
+    private void registerMapperRelationships(Class<?> mapperInterfaceType, Set<Class<?>> registry) {
+        var methods = ReflectionUtils.getAllDeclaredMethods(mapperInterfaceType);
+        for (var method : methods) {
+            if (method.getDeclaringClass() != Object.class) {
 
-			for (var c : classesToRegister) {
-				runtimeHints.reflection().registerType(c, mcs);
-			}
+                ReflectionUtils.makeAccessible(method);
 
-			for (var r : resourcesToRegister) {
-				if (r.exists()) {
-					runtimeHints.resources().registerResource(r);
-				}
-			}
-		};
-	}
+                registerSqlProviderTypes(method, registry, SelectProvider.class, SelectProvider::value,
+                        SelectProvider::type);
+                registerSqlProviderTypes(method, registry, InsertProvider.class, InsertProvider::value,
+                        InsertProvider::type);
+                registerSqlProviderTypes(method, registry, UpdateProvider.class, UpdateProvider::value,
+                        UpdateProvider::type);
+                registerSqlProviderTypes(method, registry, DeleteProvider.class, DeleteProvider::value,
+                        DeleteProvider::type);
+
+                var returnType = MyBatisMapperTypeUtils.resolveReturnClass(mapperInterfaceType, method);
+                registerReflectionTypeIfNecessary(returnType, registry);
+
+                MyBatisMapperTypeUtils.resolveParameterClasses(mapperInterfaceType, method)
+                        .forEach(x -> registerReflectionTypeIfNecessary(x, registry));
+            }
+        }
+    }
 
 }

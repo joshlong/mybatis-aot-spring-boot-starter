@@ -1,19 +1,16 @@
 package com.example.demo;
 
 import org.apache.ibatis.annotations.*;
-import org.springframework.aot.hint.MemberCategory;
-import org.springframework.aot.hint.RuntimeHints;
-import org.springframework.aot.hint.RuntimeHintsRegistrar;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ImportRuntimeHints;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Set;
 
-@ImportRuntimeHints(AppSpecificHints.class)
 @SpringBootApplication
 public class DemoApplication {
 
@@ -24,25 +21,25 @@ public class DemoApplication {
 	@Bean
 	ApplicationRunner demoRunner(CustomerMapper customerMapper) {
 		return args -> {
-			Set.of("Josh", "Stéphane", "Eddù").forEach(name -> customerMapper.save(new Customer(null, name)));
+			Set.of("A", "B", "C").forEach(name -> customerMapper.save(new Customer(null, name)));
+
+			customerMapper.find().forEach(System.out::println);
+			// second time should be faster?
 			customerMapper.find().forEach(System.out::println);
 		};
 	}
 
 }
 
-class AppSpecificHints implements RuntimeHintsRegistrar {
 
-	@Override
-	public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
-		var mcs = MemberCategory.values();
-		Set.of(CustomerMapper.class, Customer.class).forEach(c -> hints.reflection().registerType(c, mcs));
-		hints.proxies().registerJdkProxy(CustomerMapper.class);
-	}
 
-}
+class Customer
+ implements Serializable // for caching
+{
 
-class Customer {
+
+	@Serial
+	private static final long serialVersionUID = 1L;
 
 	Integer id;
 
@@ -60,6 +57,7 @@ class Customer {
 
 }
 
+@CacheNamespace
 @Mapper
 interface CustomerMapper {
 
