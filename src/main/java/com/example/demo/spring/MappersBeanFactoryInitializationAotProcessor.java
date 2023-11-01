@@ -30,9 +30,7 @@ class MappersBeanFactoryInitializationAotProcessor implements BeanFactoryInitial
 
 	private Set<Resource> persistenceResources(String rootPackage) throws Exception {
 
-		var folderFromPackage = new StringBuilder();
-		for (var c : rootPackage.toCharArray())
-			folderFromPackage.append(c == '.' ? '/' : c);
+		var folderFromPackage = AotUtils.packageNameToFolder(rootPackage);
 
 		var patterns = Stream//
 			.of(folderFromPackage + "/**/mappings.xml")//
@@ -45,7 +43,7 @@ class MappersBeanFactoryInitializationAotProcessor implements BeanFactoryInitial
 					throw new RuntimeException(e);
 				}
 			})
-			.map(MappersBeanFactoryInitializationAotProcessor::newResourceFor)
+			.map(AotUtils::newResourceFor)
 			.toList();
 
 		var resources = new HashSet<Resource>();
@@ -55,18 +53,6 @@ class MappersBeanFactoryInitializationAotProcessor implements BeanFactoryInitial
 			resources.addAll(mappers);
 		}
 		return resources.stream().filter(Resource::exists).collect(Collectors.toSet());
-	}
-
-	private static Resource newResourceFor(Resource in) {
-		try {
-			var marker = "jar!";
-			var p = in.getURL().toExternalForm();
-			var rest = p.substring(p.lastIndexOf(marker) + marker.length());
-			return new ClassPathResource(rest);
-		}
-		catch (IOException e) {
-			throw new RuntimeException(e);
-		}
 	}
 
 	@Override

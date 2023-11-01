@@ -2,7 +2,10 @@ package com.example.demo.spring;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.Collection;
 
@@ -17,6 +20,18 @@ final class AotUtils {
 		// noop
 	}
 
+	static Resource newResourceFor(Resource in) {
+		try {
+			var marker = "jar!";
+			var p = in.getURL().toExternalForm();
+			var rest = p.substring(p.lastIndexOf(marker) + marker.length());
+			return new ClassPathResource(rest);
+		}
+		catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
 	static boolean isSerializable(Class<?> clazz) {
 		return Serializable.class.isAssignableFrom(clazz);
 	}
@@ -26,6 +41,14 @@ final class AotUtils {
 		for (var t : tCollection)
 			log.debug('\t' + t.toString());
 		log.debug(System.lineSeparator());
+	}
+
+	static String packageNameToFolder(String packageName) {
+		var sb = new StringBuilder();
+		for (var c : packageName.toCharArray())
+			sb.append(c == '.' ? '/' : c);
+		return sb.toString();
+
 	}
 
 }

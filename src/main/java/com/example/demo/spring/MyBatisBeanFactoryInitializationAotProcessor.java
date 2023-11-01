@@ -10,13 +10,18 @@ import org.springframework.aot.hint.TypeReference;
 import org.springframework.beans.factory.aot.BeanFactoryInitializationAotContribution;
 import org.springframework.beans.factory.aot.BeanFactoryInitializationAotProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.boot.autoconfigure.AutoConfigurationPackages;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.core.io.support.ResourcePatternResolver;
+import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
@@ -26,58 +31,94 @@ import java.util.function.Function;
  */
 class MyBatisBeanFactoryInitializationAotProcessor implements BeanFactoryInitializationAotProcessor {
 
+	private final PathMatchingResourcePatternResolver resourcePatternResolver = MyBatisAotAutoConfiguration
+		.patternResolver();
+
+	private Collection<Resource> attemptToRegisterXmlResourcesForBasePackage(
+			ConfigurableListableBeanFactory beanFactory) throws Exception {
+		var set = new HashSet<Resource>();
+		for (var packageName : AutoConfigurationPackages.get(beanFactory)) {
+			Assert.hasText(packageName, "the package name must not be empty!");
+			var path = AotUtils.packageNameToFolder(packageName);
+
+			for (var resolvedXmlResource : this.resourcePatternResolver
+				.getResources(ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + "**/*.xml")) {
+
+				var fqn = resolvedXmlResource.getURI().toString();
+
+				if (resolvedXmlResource.exists() && fqn.contains(path)) {
+					var np = fqn.substring(fqn.indexOf(path));
+					var npr = new ClassPathResource(np);
+					set.add(npr);
+				}
+
+			}
+
+		}
+
+		return set;
+
+	}
+
 	@Override
 	public BeanFactoryInitializationAotContribution processAheadOfTime(ConfigurableListableBeanFactory beanFactory) {
 
 		if (!ClassUtils.isPresent("org.mybatis.spring.mapper.MapperFactoryBean", beanFactory.getBeanClassLoader()))
 			return null;
 
-		var classesToRegister = new HashSet<Class<?>>();
-		var proxiesToRegister = new HashSet<Class<?>>();
-		var resourcesToRegister = new HashSet<Resource>();
+		try {
+			var classesToRegister = new HashSet<Class<?>>();
+			var proxiesToRegister = new HashSet<Class<?>>();
+			var resourcesToRegister = new HashSet<Resource>();
 
-		var beanNames = beanFactory.getBeanNamesForType(MapperFactoryBean.class);
-		for (var beanName : beanNames) {
-			var beanDefinition = beanFactory.getBeanDefinition(beanName.substring(1));
-			var mapperInterface = beanDefinition.getPropertyValues().getPropertyValue("mapperInterface");
-			if (mapperInterface != null && mapperInterface.getValue() != null) {
-				var mapperInterfaceType = (Class<?>) mapperInterface.getValue();
-				if (mapperInterfaceType != null) {
-					proxiesToRegister.add(mapperInterfaceType);
-					resourcesToRegister
-						.add(new ClassPathResource(mapperInterfaceType.getName().replace('.', '/').concat(".xml")));
-					registerReflectionTypeIfNecessary(mapperInterfaceType, classesToRegister);
-					registerMapperRelationships(mapperInterfaceType, classesToRegister);
+			resourcesToRegister.addAll(attemptToRegisterXmlResourcesForBasePackage(beanFactory));
+
+			var beanNames = beanFactory.getBeanNamesForType(MapperFactoryBean.class);
+			for (var beanName : beanNames) {
+				var beanDefinition = beanFactory.getBeanDefinition(beanName.substring(1));
+				var mapperInterface = beanDefinition.getPropertyValues().getPropertyValue("mapperInterface");
+				if (mapperInterface != null && mapperInterface.getValue() != null) {
+					var mapperInterfaceType = (Class<?>) mapperInterface.getValue();
+					if (mapperInterfaceType != null) {
+						proxiesToRegister.add(mapperInterfaceType);
+						resourcesToRegister
+							.add(new ClassPathResource(mapperInterfaceType.getName().replace('.', '/').concat(".xml")));
+						registerReflectionTypeIfNecessary(mapperInterfaceType, classesToRegister);
+						registerMapperRelationships(mapperInterfaceType, classesToRegister);
+					}
 				}
 			}
+
+			return (generationContext, beanFactoryInitializationCode) -> {
+
+				var mcs = MemberCategory.values();
+				var runtimeHints = generationContext.getRuntimeHints();
+
+				AotUtils.debug("proxies", proxiesToRegister);
+				AotUtils.debug("classes for reflection", classesToRegister);
+				AotUtils.debug("resources", resourcesToRegister);
+
+				for (var c : proxiesToRegister) {
+					runtimeHints.proxies().registerJdkProxy(c);
+					runtimeHints.reflection().registerType(c, mcs);
+				}
+
+				for (var c : classesToRegister) {
+					runtimeHints.reflection().registerType(c, mcs);
+					if (AotUtils.isSerializable(c))
+						runtimeHints.serialization().registerType(TypeReference.of(c.getName()));
+				}
+
+				for (var r : resourcesToRegister) {
+					if (r.exists()) {
+						runtimeHints.resources().registerResource(r);
+					}
+				}
+			};
+		} //
+		catch (Exception e) {
+			throw new RuntimeException(e);
 		}
-
-		return (generationContext, beanFactoryInitializationCode) -> {
-
-			var mcs = MemberCategory.values();
-			var runtimeHints = generationContext.getRuntimeHints();
-
-			AotUtils.debug("proxies", proxiesToRegister);
-			AotUtils.debug("classes for reflection", classesToRegister);
-			AotUtils.debug("resources", resourcesToRegister);
-
-			for (var c : proxiesToRegister) {
-				runtimeHints.proxies().registerJdkProxy(c);
-				runtimeHints.reflection().registerType(c, mcs);
-			}
-
-			for (var c : classesToRegister) {
-				runtimeHints.reflection().registerType(c, mcs);
-				if (AotUtils.isSerializable(c))
-					runtimeHints.serialization().registerType(TypeReference.of(c.getName()));
-			}
-
-			for (var r : resourcesToRegister) {
-				if (r.exists()) {
-					runtimeHints.resources().registerResource(r);
-				}
-			}
-		};
 	}
 
 	@SafeVarargs

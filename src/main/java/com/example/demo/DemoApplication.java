@@ -14,7 +14,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ImportRuntimeHints;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 import java.io.Serial;
@@ -30,21 +29,6 @@ public class DemoApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(DemoApplication.class, args);
-	}
-
-	@Bean
-	ApplicationRunner debug(MybatisProperties properties, SqlSessionFactory sqlSessionFactory) {
-		return arg -> {
-			var config = sqlSessionFactory.getConfiguration();
-			var ms = config.getMappedStatements();
-			System.out.println("mapped statements size: " + ms.size());
-
-			var mapperLocations = properties.resolveMapperLocations();
-			for (var r : mapperLocations) {
-				System.out.println(r.toString());
-			}
-			System.out.println(mapperLocations.length);
-		};
 	}
 
 	@Bean
@@ -74,11 +58,12 @@ class AppSpecificHints implements RuntimeHintsRegistrar {
 	@Override
 	public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
 
+		// there's no easy way for Spring to know at compile time that
+		// we're using City with mybatis so you'll have to tell it
+
 		for (var c : Set.of(City.class))
 			hints.reflection().registerType(c, MemberCategory.values());
 
-		for (var r : Set.of("com/example/demo/CityDao.xml"))
-			hints.resources().registerResource(new ClassPathResource(r));
 	}
 
 }
