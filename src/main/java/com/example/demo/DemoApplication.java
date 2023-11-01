@@ -62,9 +62,8 @@ public class DemoApplication {
 		return args -> {
 			Set.of("A", "B", "C").forEach(name -> customerMapper.save(new Customer(null, name)));
 			customerMapper.find().forEach(System.out::println);
-			customerMapper.find().forEach(System.out::println);// two times; the second
-																// should be faster b/c of
-																// caching
+			// the second time should be faster than the first b/c of the caching
+			customerMapper.find().forEach(System.out::println);
 		};
 	}
 

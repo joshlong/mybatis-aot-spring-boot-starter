@@ -154,6 +154,7 @@ class MyBatisGlobalRuntimeHintsRegistrar implements RuntimeHintsRegistrar {
 				NoLoggingImpl.class, SLF4JLogger.class, StdOutImpl.class, BaseJdbcLogger.class, ConnectionLogger.class,
 				PreparedStatementLogger.class, ResultSetLogger.class, StatementLogger.class, Jdk14LoggingImpl.class,
 				JakartaCommonsLoggingImpl.class, Slf4jImpl.class);
+
 		var annotations = Set.of(Select.class, Update.class, Insert.class, Delete.class, SelectProvider.class,
 				UpdateProvider.class, InsertProvider.class, CacheNamespace.class, Flush.class, DeleteProvider.class,
 				Options.class, Options.FlushCachePolicy.class, Many.class, Mapper.class, One.class, Property.class,
